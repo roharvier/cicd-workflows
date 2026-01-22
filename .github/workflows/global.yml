@@ -9,12 +9,27 @@ permissions:
 
 jobs:
   call-require-assignee:
+    if: |
+      github.event.action == 'opened' ||
+      github.event.action == 'reopened' ||
+      github.event.action == 'edited' ||
+      github.event.action == 'assigned' ||
+      github.event.action == 'unassigned' ||
+      github.event.action == 'synchronize' ||
+      github.event.action == 'ready_for_review'
     uses: ./.github/workflows/require-assignee.yml
     secrets: inherit
     permissions:
       pull-requests: read
 
   call-require-conventional-commits:
+    if: |
+      github.event.action == 'opened' ||
+      github.event.action == 'reopened' ||
+      github.event.action == 'edited' ||
+      github.event.action == 'unassigned' ||
+      github.event.action == 'synchronize' ||
+      github.event.action == 'ready_for_review'
     uses: ./.github/workflows/require-conventional-commits.yml
     secrets: inherit
     permissions:
