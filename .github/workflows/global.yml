@@ -1,0 +1,15 @@
+name: Global Workflow
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, assigned, unassigned, synchronize, ready_for_review]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  call-require-assignee:
+    uses: ./.github/workflows/require-assignee.yml
+    secrets: inherit
+    permissions:
+      pull-requests: read
