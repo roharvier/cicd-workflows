@@ -1,0 +1,24 @@
+name: Require assignee
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, assigned, unassigned, synchronize, ready_for_review]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  require-assignee:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if no assignee
+        run: |
+          set -euo pipefail
+          assignees_count="$(jq -r '.pull_request.assignees | length' "$GITHUB_EVENT_PATH")"
+
+          if [ "$assignees_count" -lt 1 ]; then
+            echo "❌ Missing assignee: please assign someone to this PR."
+            exit 1
+          fi
+
+          echo "✅ Assignee present."
