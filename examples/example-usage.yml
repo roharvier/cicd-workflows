@@ -1,0 +1,16 @@
+# Exemple d'utilisation des workflows dans un autre dépôt
+# 
+# Copiez ce fichier dans votre dépôt : .github/workflows/ci-checks.yml
+# Remplacez 'romainharvier/cicd-workflows' par votre organisation/utilisateur et le nom de ce dépôt
+
+name: CI Checks
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, assigned, unassigned, synchronize, ready_for_review]
+
+jobs:
+  # Option 1 : Utiliser le workflow global (appelle tous les checks)
+  ci-checks:
+    uses: romainharvier/cicd-workflows/.github/workflows/global.yml@main
+    secrets: inherit
