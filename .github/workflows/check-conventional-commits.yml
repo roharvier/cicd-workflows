@@ -1,0 +1,89 @@
+name: Check Conventional Commits
+
+on:
+  workflow_call:
+    inputs:
+      fail_if_invalid:
+        description: 'Fail if commits do not follow conventional commit format'
+        required: false
+        type: boolean
+        default: true
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check conventional commits
+        id: check_commits
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAIL_IF_INVALID: ${{ inputs.fail_if_invalid }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.number }}
+        run: |
+          set -e
+          
+          # Pattern pour les conventional commits
+          # Format: type(scope?): description
+          # Types valides: feat, fix, docs, style, refactor, perf, test, chore, build, ci, revert
+          CONVENTIONAL_PATTERN="^(feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(\(.+\))?: .+"
+          
+          # Récupérer les commits de la PR
+          COMMITS_JSON=$(gh pr view "$PR_NUMBER" --json commits)
+          
+          # Extraire les commits et vérifier leur format
+          INVALID_COMMITS=""
+          INVALID_COUNT=0
+          
+          # Parcourir chaque commit
+          COMMIT_COUNT=$(echo "$COMMITS_JSON" | jq '.commits | length')
+          
+          for ((i=0; i<COMMIT_COUNT; i++)); do
+            COMMIT_SHA=$(echo "$COMMITS_JSON" | jq -r ".commits[$i].oid")
+            COMMIT_MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".commits[$i].messageHeadline")
+            
+            # Ignorer les merge commits
+            if [[ "$COMMIT_MESSAGE" =~ ^Merge\  ]]; then
+              continue
+            fi
+            
+            # Vérifier le format conventional commit
+            if ! [[ "$COMMIT_MESSAGE" =~ $CONVENTIONAL_PATTERN ]]; then
+              SHORT_SHA="${COMMIT_SHA:0:7}"
+              if [ -z "$INVALID_COMMITS" ]; then
+                INVALID_COMMITS="- \`$SHORT_SHA\`: $COMMIT_MESSAGE"
+              else
+                INVALID_COMMITS="$INVALID_COMMITS"$'\n'"- \`$SHORT_SHA\`: $COMMIT_MESSAGE"
+              fi
+              ((INVALID_COUNT++))
+            fi
+          done
+          
+          if [ "$INVALID_COUNT" -gt 0 ]; then
+            ERROR_MESSAGE="❌ Certains commits ne respectent pas le format Conventional Commits:"$'\n\n'
+            ERROR_MESSAGE="$ERROR_MESSAGE$INVALID_COMMITS"$'\n\n'
+            ERROR_MESSAGE="$ERROR_MESSAGE**Format attendu**: \`type(scope?): description\`"$'\n'
+            ERROR_MESSAGE="$ERROR_MESSAGE**Types valides**: feat, fix, docs, style, refactor, perf, test, chore, build, ci, revert"$'\n'
+            ERROR_MESSAGE="$ERROR_MESSAGE**Exemple**: \`feat(auth): add login functionality\`"
+            
+            if [ "$FAIL_IF_INVALID" = "true" ]; then
+              echo "$ERROR_MESSAGE"
+              exit 1
+            else
+              echo "::warning::$ERROR_MESSAGE"
+            fi
+            
+            # Ajouter un commentaire sur la PR
+            echo "$ERROR_MESSAGE" | gh pr comment "$PR_NUMBER" --body-file -
+            
+            echo "is_valid=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Tous les commits respectent le format Conventional Commits."
+            echo "is_valid=true" >> $GITHUB_OUTPUT
+          fi
