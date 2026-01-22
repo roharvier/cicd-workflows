@@ -1,0 +1,65 @@
+name: Require conventional commits
+
+on:
+  workflow_call:
+
+permissions:
+  pull-requests: read
+  contents: read
+
+jobs:
+  require-conventional-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Fail if commits don't follow conventional commit format
+        run: |
+          set -euo pipefail
+          
+          # Get the base and head SHA from the PR event
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          head_sha="${{ github.event.pull_request.head.sha }}"
+          
+          # Fetch the base branch to ensure we have the commits
+          git fetch origin "${{ github.event.pull_request.base.ref }}"
+          
+          # Get all commit messages between base and head
+          commit_messages=$(git log --format="%s" ${base_sha}..${head_sha})
+          
+          # Conventional commit pattern
+          # Format: type(scope): description
+          # Types: feat, fix, docs, style, refactor, perf, test, chore, build, ci, revert
+          pattern="^(feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(\(.+\))?: .+"
+          
+          failed=false
+          commit_count=0
+          while IFS= read -r commit_msg; do
+            # Skip empty lines
+            if [[ -z "$commit_msg" ]]; then
+              continue
+            fi
+            commit_count=$((commit_count + 1))
+            if [[ ! "$commit_msg" =~ $pattern ]]; then
+              echo "❌ Invalid commit message: '$commit_msg'"
+              echo "   Commit messages must follow the conventional commit format:"
+              echo "   type(scope): description"
+              echo "   Valid types: feat, fix, docs, style, refactor, perf, test, chore, build, ci, revert"
+              failed=true
+            fi
+          done <<< "$commit_messages"
+          
+          if [ "$commit_count" -eq 0 ]; then
+            echo "⚠️  No commits found to check."
+            exit 0
+          fi
+          
+          if [ "$failed" = true ]; then
+            exit 1
+          fi
+          
+          echo "✅ All commits follow conventional commit format."
