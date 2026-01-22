@@ -1,8 +1,7 @@
 name: Require assignee
 
 on:
-  pull_request:
-    types: [opened, reopened, edited, assigned, unassigned, synchronize, ready_for_review]
+  workflow_call:
 
 permissions:
   pull-requests: read
