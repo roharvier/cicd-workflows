@@ -13,3 +13,10 @@ jobs:
     secrets: inherit
     permissions:
       pull-requests: read
+
+  call-require-conventional-commits:
+    uses: ./.github/workflows/require-conventional-commits.yml
+    secrets: inherit
+    permissions:
+      pull-requests: read
+      contents: read
