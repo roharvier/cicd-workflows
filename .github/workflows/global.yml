@@ -4,6 +4,17 @@ on:
   pull_request:
     types: [opened, reopened, edited, assigned, unassigned, synchronize, ready_for_review]
   workflow_call:
+    inputs:
+      enable-require-assignee:
+        description: 'Enable the require-assignee check'
+        required: false
+        type: boolean
+        default: true
+      enable-require-conventional-commits:
+        description: 'Enable the require-conventional-commits check'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   pull-requests: read
@@ -11,14 +22,15 @@ permissions:
 jobs:
   call-require-assignee:
     if: |
-      github.event_name == 'workflow_call' ||
-      github.event.action == 'opened' ||
-      github.event.action == 'reopened' ||
-      github.event.action == 'edited' ||
-      github.event.action == 'assigned' ||
-      github.event.action == 'unassigned' ||
-      github.event.action == 'synchronize' ||
-      github.event.action == 'ready_for_review'
+      (github.event_name != 'workflow_call' || inputs.enable-require-assignee != false) &&
+      (github.event_name == 'workflow_call' ||
+       github.event.action == 'opened' ||
+       github.event.action == 'reopened' ||
+       github.event.action == 'edited' ||
+       github.event.action == 'assigned' ||
+       github.event.action == 'unassigned' ||
+       github.event.action == 'synchronize' ||
+       github.event.action == 'ready_for_review')
     uses: ./.github/workflows/require-assignee.yml
     secrets: inherit
     permissions:
@@ -26,13 +38,14 @@ jobs:
 
   call-require-conventional-commits:
     if: |
-      github.event_name == 'workflow_call' ||
-      github.event.action == 'opened' ||
-      github.event.action == 'reopened' ||
-      github.event.action == 'edited' ||
-      github.event.action == 'unassigned' ||
-      github.event.action == 'synchronize' ||
-      github.event.action == 'ready_for_review'
+      (github.event_name != 'workflow_call' || inputs.enable-require-conventional-commits != false) &&
+      (github.event_name == 'workflow_call' ||
+       github.event.action == 'opened' ||
+       github.event.action == 'reopened' ||
+       github.event.action == 'edited' ||
+       github.event.action == 'unassigned' ||
+       github.event.action == 'synchronize' ||
+       github.event.action == 'ready_for_review')
     uses: ./.github/workflows/require-conventional-commits.yml
     secrets: inherit
     permissions:

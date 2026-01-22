@@ -14,3 +14,12 @@ jobs:
   ci-checks:
     uses: romainharvier/cicd-workflows/.github/workflows/global.yml@main
     secrets: inherit
+
+  # Option 2 : Utiliser le workflow global avec certains checks désactivés
+  # Exemple : désactiver le check des conventional commits
+  # ci-checks:
+  #   uses: romainharvier/cicd-workflows/.github/workflows/global.yml@main
+  #   secrets: inherit
+  #   with:
+  #     enable-require-conventional-commits: false
+  #     enable-require-assignee: true
