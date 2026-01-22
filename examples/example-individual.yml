@@ -1,0 +1,21 @@
+# Exemple d'utilisation des workflows individuellement
+# 
+# Copiez ce fichier dans votre dépôt : .github/workflows/ci-checks.yml
+# Remplacez 'romainharvier/cicd-workflows' par votre organisation/utilisateur et le nom de ce dépôt
+
+name: CI Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # Vérifier qu'une PR a un assignee
+  check-assignee:
+    uses: romainharvier/cicd-workflows/.github/workflows/require-assignee.yml@main
+    secrets: inherit
+
+  # Vérifier que les commits suivent le format conventional commits
+  check-commits:
+    uses: romainharvier/cicd-workflows/.github/workflows/require-conventional-commits.yml@main
+    secrets: inherit

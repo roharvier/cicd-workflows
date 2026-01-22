@@ -4,15 +4,15 @@ Ce dépôt contient une collection de workflows GitHub Actions réutilisables po
 
 ## 📋 Workflows disponibles
 
-### 1. Check PR Assignee
-Vérifie qu'une Pull Request a au moins un assignee avant d'être mergée.
+### 1. Require Assignee
+Vérifie qu'une Pull Request a au moins un assignee.
 
-**Fichier**: `.github/workflows/check-pr-assignee.yml`
+**Fichier**: `.github/workflows/require-assignee.yml`
 
-### 2. Check Conventional Commits
+### 2. Require Conventional Commits
 Vérifie que tous les commits d'une Pull Request respectent le format [Conventional Commits](https://www.conventionalcommits.org/).
 
-**Fichier**: `.github/workflows/check-conventional-commits.yml`
+**Fichier**: `.github/workflows/require-conventional-commits.yml`
 
 **Format attendu**: `type(scope?): description`
 
@@ -24,33 +24,45 @@ Vérifie que tous les commits d'une Pull Request respectent le format [Conventio
 - ✅ `docs: update README`
 - ❌ `Update code` (ne respecte pas le format)
 
-### 3. CI/CD Wrapper
+### 3. Global Workflow
 Workflow principal qui appelle tous les autres workflows de validation.
 
-**Fichier**: `.github/workflows/ci-cd-wrapper.yml`
+**Fichier**: `.github/workflows/global.yml`
 
 ## 🚀 Utilisation dans d'autres dépôts
 
-### Méthode 1 : Utiliser le workflow wrapper (recommandé)
+### ⚠️ Prérequis
 
-Créez un fichier `.github/workflows/ci-cd.yml` dans votre dépôt :
+Pour utiliser ces workflows dans d'autres dépôts, vous devez :
+
+1. **Rendre ce dépôt accessible** :
+   - Si le dépôt est **public** : vous pouvez l'utiliser directement
+   - Si le dépôt est **privé** : les autres dépôts doivent avoir accès (même organisation ou accès configuré)
+
+2. **Remplacer le chemin** : Dans tous les exemples ci-dessous, remplacez `romainharvier/cicd-workflows` par :
+   - Votre nom d'utilisateur ou organisation GitHub
+   - Le nom de ce dépôt
+
+3. **Spécifier la branche** : Utilisez `@main`, `@master`, ou une autre branche/tag selon votre configuration
+
+### Méthode 1 : Utiliser le workflow global (recommandé)
+
+Créez un fichier `.github/workflows/ci-checks.yml` dans votre dépôt :
 
 ```yaml
-name: CI/CD Checks
+name: CI Checks
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, reopened, edited, assigned, unassigned, synchronize, ready_for_review]
 
 jobs:
-  ci-cd-checks:
-    uses: romainharvier/cicd-workflows/.github/workflows/ci-cd-wrapper.yml@main
-    with:
-      check_assignee: true
-      check_assignee_fail: true
-      check_commits: true
-      check_commits_fail: true
+  ci-checks:
+    uses: romainharvier/cicd-workflows/.github/workflows/global.yml@main
+    secrets: inherit
 ```
+
+**Note** : Remplacez `romainharvier/cicd-workflows` par le nom de votre organisation/utilisateur GitHub et le nom de ce dépôt.
 
 ### Méthode 2 : Utiliser les workflows individuellement
 
@@ -65,9 +77,8 @@ on:
 
 jobs:
   check-assignee:
-    uses: romainharvier/cicd-workflows/.github/workflows/check-pr-assignee.yml@main
-    with:
-      fail_if_no_assignee: true
+    uses: romainharvier/cicd-workflows/.github/workflows/require-assignee.yml@main
+    secrets: inherit
 ```
 
 #### Vérifier les conventional commits
@@ -81,40 +92,38 @@ on:
 
 jobs:
   check-commits:
-    uses: romainharvier/cicd-workflows/.github/workflows/check-conventional-commits.yml@main
-    with:
-      fail_if_invalid: true
+    uses: romainharvier/cicd-workflows/.github/workflows/require-conventional-commits.yml@main
+    secrets: inherit
 ```
 
-## ⚙️ Paramètres du wrapper
+### Méthode 3 : Créer votre propre workflow combiné
 
-Le workflow wrapper accepte les paramètres suivants :
-
-| Paramètre | Description | Défaut |
-|-----------|-------------|--------|
-| `check_assignee` | Activer la vérification de l'assignee | `true` |
-| `check_assignee_fail` | Échouer si pas d'assignee | `true` |
-| `check_commits` | Activer la vérification des commits | `true` |
-| `check_commits_fail` | Échouer si commits invalides | `true` |
-
-### Exemple avec paramètres personnalisés
+Vous pouvez créer votre propre workflow qui appelle les workflows individuels selon vos besoins :
 
 ```yaml
-name: CI/CD Checks
+name: Custom CI Checks
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
-  ci-cd-checks:
-    uses: romainharvier/cicd-workflows/.github/workflows/ci-cd-wrapper.yml@main
-    with:
-      check_assignee: true
-      check_assignee_fail: false  # Avertissement seulement, ne bloque pas
-      check_commits: true
-      check_commits_fail: true
+  check-assignee:
+    uses: romainharvier/cicd-workflows/.github/workflows/require-assignee.yml@main
+    secrets: inherit
+
+  check-commits:
+    uses: romainharvier/cicd-workflows/.github/workflows/require-conventional-commits.yml@main
+    secrets: inherit
 ```
+
+## 🔐 Permissions requises
+
+Les workflows nécessitent les permissions suivantes :
+- `pull-requests: read` (pour lire les informations des PR)
+- `contents: read` (pour le workflow de vérification des commits)
+
+Ces permissions sont définies dans chaque workflow et seront automatiquement appliquées lors de l'utilisation.
 
 ## 🔧 Développement local
 
@@ -131,9 +140,19 @@ act pull_request
 ## 📝 Ajouter un nouveau workflow
 
 1. Créez un nouveau fichier dans `.github/workflows/` avec le suffixe `.yml`
-2. Définissez le workflow avec `workflow_call` pour le rendre réutilisable
-3. Ajoutez l'appel dans `ci-cd-wrapper.yml`
+2. Définissez le workflow avec `workflow_call` pour le rendre réutilisable :
+   ```yaml
+   on:
+     workflow_call:
+   ```
+3. Ajoutez l'appel dans `global.yml` si vous voulez qu'il soit inclus dans le workflow global
 4. Mettez à jour ce README
+
+## 📁 Exemples
+
+Des exemples d'utilisation sont disponibles dans le dossier `examples/` :
+- `example-usage.yml` : Utilisation du workflow global
+- `example-individual.yml` : Utilisation des workflows individuellement
 
 ## 📄 Licence
 
